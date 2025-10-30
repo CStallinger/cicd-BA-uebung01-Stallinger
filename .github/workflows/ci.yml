@@ -26,7 +26,7 @@ jobs:
         java: [17, 21]
         exclude:
           - os: windows-latest
-            java: 21  # Excluded-Kombination -> im PDF begründen
+            java: 21
 
     steps:
       - name: Checkout
@@ -61,7 +61,6 @@ jobs:
   sonar:
     name: SonarCloud Analysis (Ubuntu / Java 21)
     runs-on: ubuntu-latest
-    needs: build-test
     if: github.ref == 'refs/heads/main'
 
     steps:
