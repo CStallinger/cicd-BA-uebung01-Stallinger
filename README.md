@@ -1,4 +1,5 @@
 ![CI](https://github.com/CStallinger/cicd-BA-uebung01-Stallinger/actions/workflows/ci.yml/badge.svg)
+![Docker Image](https://github.com/CStallinger/cicd-BA-uebung01-Stallinger/actions/workflows/docker.yml/badge.svg)
 # CI/CD Übung – Java Basisprojekt (Ü1 mit Anleitungen)
 
 Dieses Repository ist der Startpunkt für **Übung 1** und wird in **allen folgenden Übungen** weiterverwendet
