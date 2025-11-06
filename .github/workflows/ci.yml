@@ -7,15 +7,21 @@ on:
       - "pom.xml"
       - "src/**"
       - ".github/workflows/ci.yml"
+      - "Dockerfile"
+      - ".dockerignore"
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
 
+# Verhindert parallele doppelte Runs bei schnellen Pushes
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ====================================================
+  # Build & Test – Matrix-Builds mit Maven & Surefire
+  # ====================================================
   build-test:
     name: Build & Test (${{ matrix.os }} / Java ${{ matrix.java }})
     runs-on: ${{ matrix.os }}
@@ -26,7 +32,7 @@ jobs:
         java: [17, 21]
         exclude:
           - os: windows-latest
-            java: 21
+            java: 21  # Kombination ausschließen
 
     steps:
       - name: Checkout
@@ -58,13 +64,18 @@ jobs:
           path: "**/target/site/jacoco/jacoco.xml"
           retention-days: 7
 
+  # ====================================================
+  # SonarCloud – Qualitätsanalyse & Coverage
+  # ====================================================
   sonar:
     name: SonarCloud Analysis (Ubuntu / Java 21)
     runs-on: ubuntu-latest
+    needs: build-test
     if: github.ref == 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -84,3 +95,54 @@ jobs:
             -Dsonar.organization=cstallinger
             -Dsonar.java.binaries=target/classes
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+  # ====================================================
+  # Docker – Image-Build & Artifact Export
+  # ====================================================
+  docker:
+    name: Build & Export Docker Image
+    runs-on: ubuntu-latest
+    needs: sonar   # läuft erst nach erfolgreichem Sonar-Job
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: docker-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK (Cache für Maven-Stage)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute short SHA
+        id: vars
+        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      # Build das Image und lädt es in die lokale Engine
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: local/app:${{ steps.vars.outputs.short_sha }}
+
+      # Exportiere Image als TAR-Datei
+      - name: Save Docker image as .tar
+        run: docker save -o image-${{ steps.vars.outputs.short_sha }}.tar local/app:${{ steps.vars.outputs.short_sha }}
+
+      # Lade das Image als Artifact hoch
+      - name: Upload Docker Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ steps.vars.outputs.short_sha }}
+          path: image-${{ steps.vars.outputs.short_sha }}.tar
+          retention-days: 7

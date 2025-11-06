@@ -1,0 +1,13 @@
+# Maven build output
+target/
+
+# VCS & IDE files
+.git/
+.gitignore
+.github/
+.idea/
+.vscode/
+
+# OS / temp
+.DS_Store
+*.log
