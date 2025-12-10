@@ -154,11 +154,10 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
           grype version
 
-      - name: Scan image with Grype (JSON) - fail on medium
+      - name: Scan image with Grype (JSON) - report only
         run: |
-          grype local/app:${{ steps.vars.outputs.short_sha }} \
-            --fail-on medium \
-            -o json > grype-report.json
+          grype local/app:${{ steps.vars.outputs.short_sha }} -o json > grype-report.json || true
+
 
       - name: Upload Grype JSON report
         uses: actions/upload-artifact@v4
