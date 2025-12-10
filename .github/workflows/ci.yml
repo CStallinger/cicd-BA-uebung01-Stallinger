@@ -173,10 +173,13 @@ jobs:
             | sudo sh -s -- -b /usr/local/bin
           trivy --version
 
-      # "Report only" – bricht den Build NICHT ab (Basisvariante)
       - name: Scan image with Trivy (JSON)
         run: |
-          trivy image --format json --output trivy-report.json local/app:${{ steps.vars.outputs.short_sha }} || true
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --ignore-unfixed \
+            local/app:${{ steps.vars.outputs.short_sha }}
 
       - name: Upload Trivy JSON report
         uses: actions/upload-artifact@v4
